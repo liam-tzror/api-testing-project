@@ -4,6 +4,13 @@ const Database = require('better-sqlite3');
 const app = express();
 app.use(express.json());
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Methods', '*');
+  next();
+});
+
 const db = new Database('tasks.db');
 
 db.exec(`

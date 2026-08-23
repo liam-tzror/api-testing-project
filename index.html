@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>Task Manager</title>
+</head>
+<body>
+
+  <!-- מסך 1: התחברות -->
+  <div id="login-screen">
+    <h2>התחברות</h2>
+    <input id="username" placeholder="שם משתמש" />
+    <input id="password" type="password" placeholder="סיסמה" />
+    <button id="login-button">התחבר</button>
+    <p id="login-error" style="color: red;"></p>
+  </div>
+
+  <!-- מסך 2: רשימת משימות (מוסתר עד שמתחברים) -->
+  <div id="tasks-screen" style="display: none;">
+    <h2>המשימות שלי</h2>
+
+    <input id="new-task-title" placeholder="שם משימה חדשה" />
+    <button id="add-task-button">הוסף משימה</button>
+    <p id="task-error" style="color: red;"></p>
+
+    <ul id="task-list"></ul>
+  </div>
+
+<script>
+  const BASE_URL = "http://localhost:3000";
+  let token = null;
+
+  // ----- התחברות -----
+  document.getElementById("login-button").addEventListener("click", async () => {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+    const errorEl = document.getElementById("login-error");
+    errorEl.textContent = "";
+
+    try {
+      const response = await fetch(`${BASE_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        errorEl.textContent = data.error || "שגיאת התחברות";
+        return;
+      }
+
+      token = data.token;
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("tasks-screen").style.display = "block";
+      loadTasks();
+    } catch (e) {
+      errorEl.textContent = "שגיאת חיבור לשרת";
+    }
+  });
+
+  // ----- טעינת משימות -----
+  async function loadTasks() {
+    const response = await fetch(`${BASE_URL}/tasks`, {
+      headers: { authorization: token }
+    });
+    const tasks = await response.json();
+
+    const list = document.getElementById("task-list");
+    list.innerHTML = "";
+
+    tasks.forEach(task => {
+      const li = document.createElement("li");
+      li.setAttribute("data-task-id", task.id);
+
+      const span = document.createElement("span");
+      span.textContent = `${task.title} [${task.status}]`;
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "מחק";
+      deleteBtn.className = "delete-button";
+      deleteBtn.addEventListener("click", () => deleteTask(task.id));
+
+      li.appendChild(span);
+      li.appendChild(deleteBtn);
+      list.appendChild(li);
+    });
+  }
+
+  // ----- הוספת משימה -----
+  document.getElementById("add-task-button").addEventListener("click", async () => {
+    const titleInput = document.getElementById("new-task-title");
+    const errorEl = document.getElementById("task-error");
+    errorEl.textContent = "";
+
+    const response = await fetch(`${BASE_URL}/tasks`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: token
+      },
+      body: JSON.stringify({ title: titleInput.value })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      errorEl.textContent = data.error || "שגיאה ביצירת משימה";
+      return;
+    }
+
+    titleInput.value = "";
+    loadTasks();
+  });
+
+  // ----- מחיקת משימה -----
+  async function deleteTask(id) {
+    await fetch(`${BASE_URL}/tasks/${id}`, {
+      method: "DELETE",
+      headers: { authorization: token }
+    });
+    loadTasks();
+  }
+</script>
+
+</body>
+</html>
