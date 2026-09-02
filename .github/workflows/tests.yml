@@ -1,0 +1,43 @@
+name: Run Tests
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Node dependencies
+        run: npm install
+      
+      - name: Install Python dependencies
+        run: pip install requests pytest pytest-playwright --break-system-packages
+      
+      - name: Install Playwright browsers
+        run: playwright install --with-deps
+      
+      - name: Start server
+        run: node server.js &
+      
+      - name: Wait for server
+        run: sleep 2
+      
+      - name: Run API tests
+        run: python -m pytest test_advanced.py -v
+      
+      - name: Start HTTP server for UI
+        run: python -m http.server 8080 &
+      
+      - name: Run UI tests
+        run: python -m pytest test_ui.py -v
